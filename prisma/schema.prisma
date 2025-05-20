@@ -1,0 +1,716 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// ENUMERACIONES
+//
+enum Gender {
+  MASCULINO //MASCULINO
+  FEMENINO //FEMENINO
+}
+
+enum TypePerson {
+  N // Natural
+  J // Jurídica
+}
+
+enum MaritalStatusPerson {
+  S // Soltero
+  C // Casado
+  D // Divorciado
+  V // Viudo
+  U // UniónLibre
+  SP // Separado
+  O // Otro
+}
+
+enum TipoPagador {
+  LEAD
+  TERCERO
+}
+
+enum TipoSeguro {
+  VEHICULAR
+  SALUD
+  GENERALES
+}
+
+enum EstadoCotizacion {
+  PENDIENTE
+  ACEPTADA
+  RECHAZADA
+  EXPIRADA
+}
+
+enum MetodoPago {
+  CONTADO
+  TARJETA_CREDITO
+  FINANCIADO
+}
+
+enum EstadoPoliza {
+  VIGENTE
+  VENCIDA
+  CANCELADA
+  SUSPENDIDA
+}
+
+enum EstadoSiniestro {
+  REPORTADO
+  EN_EVALUACION
+  APROBADO
+  RECHAZADO
+  PAGADO
+  CERRADO
+}
+
+enum TipoEventoPoliza {
+  EMISION
+  RENOVACION
+  MODIFICACION
+  CANCELACION
+  SUSPENSION
+  REACTIVACION
+  ANULACION
+  ENDOSO
+  CAMBIO_BENEFICIARIOS
+  CAMBIO_COBERTURAS
+  CAMBIO_PRIMA
+}
+
+enum TipoEndoso {
+  INCLUSION
+  EXCLUSION
+  MODIFICACION
+  ACLARACION
+}
+
+enum EstadoRenovacion {
+  PENDIENTE
+  ENVIADA
+  ACEPTADA
+  RECHAZADA
+  VENCIDA
+}
+
+enum RolUsuario {
+  ADMIN
+  VENDEDOR
+  ANALISTA
+  CLIENTE
+  SOPORTE
+}
+
+enum TipoAccion {
+  CREATE
+  UPDATE
+  DELETE
+  VIEW
+  LOGIN
+  LOGOUT
+}
+
+//
+// SISTEMA DE USUARIOS Y AUDITORÍA
+//
+model Usuario {
+  id             Int        @id @default(autoincrement())
+  username       String     @unique
+  email          String     @unique
+  passwordHash   String
+  nombreCompleto String
+  rol            RolUsuario
+  activo         Boolean    @default(true)
+  ultimoAcceso   DateTime?
+
+  // Relaciones
+  vendedor Vendedor?
+  sesiones SesionUsuario[]
+  acciones AuditoriaAccion[]
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model SesionUsuario {
+  id          Int       @id @default(autoincrement())
+  usuarioId   Int
+  fechaInicio DateTime  @default(now())
+  fechaFin    DateTime?
+  ipAddress   String
+  userAgent   String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model AuditoriaAccion {
+  id              Int        @id @default(autoincrement())
+  usuarioId       Int
+  fecha           DateTime   @default(now())
+  modelo          String // Nombre del modelo afectado
+  accion          TipoAccion // CREATE, UPDATE, DELETE, VIEW, LOGIN, LOGOUT
+  entidadId       String // ID del registro afectado (string para flexibilidad)
+  datosAnteriores String? // JSON con datos antes del cambio
+  datosNuevos     String? // JSON con datos después del cambio
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  // Relaciones inversas para auditoría
+  paises                 Pais[]
+  provincias             Provincia[]
+  ciudades               Ciudad[]
+  personas               Persona[]
+  personasContratantes   PersonaContratante[]
+  parentescos            Parentesco[]
+  clientes               Cliente[]
+  vendedores             Vendedor[]
+  cotizaciones           Cotizacion[]
+  vehiculos              Vehiculo[]
+  segurosSalud           SeguroSalud[]
+  beneficiariosSalud     BeneficiarioSalud[]
+  segurosGenerales       SeguroGeneral[]
+  pagos                  Pago[]
+  pagadores              Pagador[]
+  polizas                Poliza[]
+  historialesPoliza      HistorialPoliza[]
+  versionesPoliza        VersionPoliza[]
+  cambiosCoberturaPoliza CambioCoberturaPoliza[]
+  endosos                Endoso[]
+  renovaciones           Renovacion[]
+  siniestros             Siniestro[]
+  documentos             Documento[]
+}
+
+//
+// MODELOS DE UBICACIÓN
+//
+model Pais {
+  id        Int    @id @default(autoincrement())
+  nombre    String
+  codigoISO String @unique
+
+  provincias  Provincia[]
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Provincia {
+  id     Int    @id @default(autoincrement())
+  nombre String
+  paisId Int
+
+  pais        Pais             @relation(fields: [paisId], references: [id])
+  ciudades    Ciudad[]
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Ciudad {
+  id           Int     @id @default(autoincrement())
+  nombre       String
+  provinciaId  Int
+  codigoPostal String?
+
+  provincia   Provincia        @relation(fields: [provinciaId], references: [id])
+  personas    Persona[]
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+//
+// MODELOS DE PERSONAS
+//
+model Persona {
+  id              Int        @id @default(autoincrement())
+  tipoPersona     TypePerson
+  nombre          String
+  apellidos       String
+  numeroDocumento String     @unique
+  fechaNacimiento DateTime
+  correo          String
+  telefono        String
+  ciudadId        Int
+  avatar          String?
+  contratante     Boolean
+
+  // Datos complementarios
+  genero               Gender
+  estadoCivil          MaritalStatusPerson
+  nombreConyugue       String?
+  ciConyugue           String?
+  activos              Float
+  pasivos              Float
+  ingresos             Float
+  egresos              Float
+  direccionDomicilio   String
+  direccionTrabajo     String
+  nombreEmpresaTrabajo String
+  cargoProfesion       String
+
+  // Relaciones
+  ciudad            Ciudad              @relation(fields: [ciudadId], references: [id])
+  contratanteInfo   PersonaContratante?
+  cliente           Cliente?
+  cotizaciones      Cotizacion[]
+  pagadorDe         Pagador[]
+  beneficiarioSalud BeneficiarioSalud[]
+  auditoriaId       Int?
+  auditoria         AuditoriaAccion?    @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model PersonaContratante {
+  id           Int @id @default(autoincrement())
+  personaId    Int @unique
+  parentescoId Int
+
+  persona     Persona          @relation(fields: [personaId], references: [id])
+  parentesco  Parentesco       @relation(fields: [parentescoId], references: [id])
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+//
+// MODELOS DE CATÁLOGO
+//
+model Parentesco {
+  id          Int     @id @default(autoincrement())
+  nombre      String  @unique
+  descripcion String?
+
+  contratantes       PersonaContratante[]
+  pagadores          Pagador[]
+  beneficiariosSalud BeneficiarioSalud[]
+  auditoriaId        Int?
+  auditoria          AuditoriaAccion?     @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+//
+// MODELOS DE CLIENTES Y VENTAS
+//
+model Cliente {
+  id         Int      @id @default(autoincrement())
+  personaId  Int      @unique
+  fechaAlta  DateTime @default(now())
+  vendedorId Int
+
+  persona      Persona          @relation(fields: [personaId], references: [id])
+  vendedor     Vendedor         @relation(fields: [vendedorId], references: [id])
+  cotizaciones Cotizacion[]
+  auditoriaId  Int?
+  auditoria    AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Vendedor {
+  id              Int      @id @default(autoincrement())
+  usuarioId       Int      @unique // Relacionado con el usuario del sistema
+  nombre          String
+  apellido        String
+  correo          String   @unique
+  telefono        String
+  fechaIngreso    DateTime @default(now())
+  nivelComisionId Int?
+
+  usuario      Usuario          @relation(fields: [usuarioId], references: [id])
+  cotizaciones Cotizacion[]
+  clientes     Cliente[]
+  auditoriaId  Int?
+  auditoria    AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+//
+// MODELOS DE COTIZACIONES
+//
+model Cotizacion {
+  id              Int              @id @default(autoincrement())
+  leadId          Int
+  estado          EstadoCotizacion
+  fechaCotizacion DateTime         @default(now())
+  fechaExpiracion DateTime // Fecha hasta la que es válida la cotización
+  aseguradora     String
+  renovacionAuto  Boolean          @default(false)
+  tipoSeguro      TipoSeguro
+  vendedorId      Int
+  clienteId       Int?
+  primaTotal      Float
+  primaNeta       Float
+  impuestos       Float
+  comision        Float
+
+  lead          Persona          @relation(fields: [leadId], references: [id])
+  vendedor      Vendedor         @relation(fields: [vendedorId], references: [id])
+  cliente       Cliente?         @relation(fields: [clienteId], references: [id])
+  vehiculos     Vehiculo[]
+  seguroSalud   SeguroSalud?
+  seguroGeneral SeguroGeneral?
+  pagos         Pago[]
+  poliza        Poliza?
+  auditoriaId   Int?
+  auditoria     AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+//
+// MODELOS DE TIPOS DE SEGUROS
+//
+model Vehiculo {
+  id             Int    @id @default(autoincrement())
+  cotizacionId   Int
+  placa          String
+  marca          String
+  modelo         String
+  anio           Int
+  valorAsegurado Float
+  color          String
+  numeroChassis  String
+  numeroMotor    String
+  uso            String // Particular, comercial, etc.
+
+  cotizacion  Cotizacion       @relation(fields: [cotizacionId], references: [id])
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model SeguroSalud {
+  id                    Int     @id @default(autoincrement())
+  cotizacionId          Int     @unique
+  planSalud             String
+  coberturaHospitalaria Boolean
+  coberturaAmbulatorial Boolean
+  coberturaMedicamentos Boolean
+  preexistencias        String?
+  limiteCovertura       Float
+  deducible             Float
+
+  cotizacion    Cotizacion          @relation(fields: [cotizacionId], references: [id])
+  beneficiarios BeneficiarioSalud[]
+  auditoriaId   Int?
+  auditoria     AuditoriaAccion?    @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model BeneficiarioSalud {
+  id            Int @id @default(autoincrement())
+  seguroSaludId Int
+  personaId     Int
+  parentescoId  Int
+
+  seguroSalud SeguroSalud      @relation(fields: [seguroSaludId], references: [id])
+  persona     Persona          @relation(fields: [personaId], references: [id])
+  parentesco  Parentesco       @relation(fields: [parentescoId], references: [id])
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model SeguroGeneral {
+  id                   Int     @id @default(autoincrement())
+  cotizacionId         Int     @unique
+  tipoRiesgo           String // Tipo específico de seguro general (Incendio, Robo, Responsabilidad Civil, etc.)
+  descripcionRiesgo    String
+  ubicacionRiesgo      String?
+  valorAsegurado       Float
+  deducible            Float
+  coberturasEspeciales String? // JSON con coberturas especiales
+
+  cotizacion  Cotizacion       @relation(fields: [cotizacionId], references: [id])
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+//
+// MODELOS DE PAGOS
+//
+model Pago {
+  id           Int        @id @default(autoincrement())
+  cotizacionId Int
+  metodoPago   MetodoPago
+  monto        Float
+  descuento    Float      @default(0.0)
+  pagadorId    Int
+  fechaPago    DateTime
+  comprobante  String? // Ruta al archivo de comprobante
+
+  cotizacion  Cotizacion       @relation(fields: [cotizacionId], references: [id])
+  pagador     Pagador          @relation(fields: [pagadorId], references: [id])
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Pagador {
+  id           Int         @id @default(autoincrement())
+  personaId    Int
+  parentescoId Int?
+  tipo         TipoPagador
+
+  persona     Persona          @relation(fields: [personaId], references: [id])
+  parentesco  Parentesco?      @relation(fields: [parentescoId], references: [id])
+  pagos       Pago[]
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+//
+// MODELOS DE PÓLIZAS Y SINIESTROS
+//
+model Poliza {
+  id            Int          @id @default(autoincrement())
+  cotizacionId  Int          @unique
+  numeroPoliza  String       @unique
+  fechaEmision  DateTime
+  fechaInicio   DateTime
+  fechaFin      DateTime
+  estadoPoliza  EstadoPoliza
+  primaTotal    Float
+  primaNeta     Float
+  impuestos     Float
+  comision      Float
+  rutaDocumento String? // Ruta al archivo de la póliza
+  versionActual Int          @default(1)
+
+  cotizacion   Cotizacion        @relation(fields: [cotizacionId], references: [id])
+  renovaciones Renovacion[]      @relation("PolizaRenovaciones")
+  siniestros   Siniestro[]
+  historial    HistorialPoliza[]
+  versiones    VersionPoliza[]
+  endosos      Endoso[]
+  auditoriaId  Int?
+  auditoria    AuditoriaAccion?  @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model HistorialPoliza {
+  id            Int              @id @default(autoincrement())
+  polizaId      Int
+  tipoEvento    TipoEventoPoliza
+  fechaEvento   DateTime         @default(now())
+  descripcion   String
+  valorAnterior String? // Valor anterior en formato JSON (para cambios)
+  valorNuevo    String? // Valor nuevo en formato JSON (para cambios)
+
+  poliza      Poliza           @relation(fields: [polizaId], references: [id])
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model VersionPoliza {
+  id            Int      @id @default(autoincrement())
+  polizaId      Int
+  numeroVersion Int
+  fechaVersion  DateTime @default(now())
+  motivo        String
+  rutaDocumento String? // Ruta al documento de esta versión
+
+  // Campos que cambian entre versiones
+  primaTotal  Float
+  primaNeta   Float
+  impuestos   Float
+  fechaInicio DateTime
+  fechaFin    DateTime
+
+  // Relaciones
+  poliza            Poliza                  @relation(fields: [polizaId], references: [id])
+  cambiosCoberturas CambioCoberturaPoliza[]
+  auditoriaId       Int?
+  auditoria         AuditoriaAccion?        @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model CambioCoberturaPoliza {
+  id               Int      @id @default(autoincrement())
+  versionPolizaId  Int
+  nombreCobertura  String
+  valorAnterior    Float?
+  valorNuevo       Float?
+  incluidaAnterior Boolean?
+  incluidaNuevo    Boolean?
+
+  versionPoliza VersionPoliza    @relation(fields: [versionPolizaId], references: [id])
+  auditoriaId   Int?
+  auditoria     AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Endoso {
+  id            Int        @id @default(autoincrement())
+  polizaId      Int
+  numeroEndoso  Int
+  tipoEndoso    TipoEndoso
+  fechaEndoso   DateTime   @default(now())
+  descripcion   String
+  impactoValor  Float // Positivo si aumenta la prima, negativo si la reduce
+  rutaDocumento String?
+
+  poliza      Poliza           @relation(fields: [polizaId], references: [id])
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Renovacion {
+  id               Int              @id @default(autoincrement())
+  polizaAnteriorId Int
+  polizaId         Int
+  fechaSolicitud   DateTime         @default(now())
+  fechaVencimiento DateTime // Fecha límite para renovar
+  estado           EstadoRenovacion @default(PENDIENTE)
+  observaciones    String?
+
+  Poliza Poliza @relation("PolizaRenovaciones", fields: [polizaId], references: [id])
+
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Siniestro {
+  id              Int             @id @default(autoincrement())
+  polizaId        Int
+  numeroSiniestro String          @unique
+  fechaOcurrencia DateTime
+  fechaReporte    DateTime        @default(now())
+  descripcion     String
+  lugarOcurrencia String
+  montoReclamado  Float?
+  montoAprobado   Float?
+  estado          EstadoSiniestro @default(REPORTADO)
+  observaciones   String?
+
+  poliza      Poliza           @relation(fields: [polizaId], references: [id])
+  documentos  Documento[]
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Documento {
+  id            Int      @id @default(autoincrement())
+  siniestroId   Int
+  tipoDocumento String
+  nombre        String
+  rutaArchivo   String
+  fechaCarga    DateTime @default(now())
+  descripcion   String?
+
+  siniestro   Siniestro        @relation(fields: [siniestroId], references: [id])
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  // Campos de auditoría estándar
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
