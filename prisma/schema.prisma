@@ -42,10 +42,13 @@ enum TipoSeguro {
 }
 
 enum EstadoCotizacion {
-  PENDIENTE
-  ACEPTADA
-  RECHAZADA
-  EXPIRADA
+  BORRADOR // Al iniciar
+  PROPUESTA // Ya tiene propuestas generadas
+  SELECCIONADA // Cliente eligió una opción
+  CONFIRMADA // Se validó con cliente
+  PAGADA // Si hay integración de pagos
+  POLIZA_EMITIDA // Si se emite una póliza
+  CANCELADA // Manual o por expiración
 }
 
 enum MetodoPago {
@@ -179,9 +182,9 @@ model AuditoriaAccion {
   vendedores             Vendedor[]
   cotizaciones           Cotizacion[]
   vehiculos              Vehiculo[]
-  segurosSalud           SeguroSalud[]
+  segurosSalud           CotizacionSalud[]
   beneficiariosSalud     BeneficiarioSalud[]
-  segurosGenerales       SeguroGeneral[]
+  segurosGenerales       CotizacionGeneral[]
   pagos                  Pago[]
   pagadores              Pagador[]
   polizas                Poliza[]
@@ -296,6 +299,12 @@ model PersonaContratante {
   personaId    Int @unique
   parentescoId Int
 
+  tipoPersona       TypePerson
+  numeroDocumento   String
+  nombreContratante String
+  correo            String
+  telefono          String
+
   persona     Persona          @relation(fields: [personaId], references: [id])
   parentesco  Parentesco       @relation(fields: [parentescoId], references: [id])
   auditoriaId Int?
@@ -337,8 +346,9 @@ model Cliente {
   vendedorId Int
 
   persona      Persona          @relation(fields: [personaId], references: [id])
-  vendedor     Vendedor         @relation(fields: [vendedorId], references: [id])
+  vendedor     Vendedor?         @relation(fields: [vendedorId], references: [id])
   cotizaciones Cotizacion[]
+  vehiculos    Vehiculo[]
   auditoriaId  Int?
   auditoria    AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
 
@@ -375,64 +385,171 @@ model Vendedor {
 //
 model Cotizacion {
   id              Int              @id @default(autoincrement())
-  leadId          Int
+  tipo            TipoSeguro
   estado          EstadoCotizacion
   fechaCotizacion DateTime         @default(now())
-  fechaExpiracion DateTime // Fecha hasta la que es válida la cotización
-  aseguradora     String
+  fechaExpiracion DateTime
   renovacionAuto  Boolean          @default(false)
-  tipoSeguro      TipoSeguro
+  leadId          Int
   vendedorId      Int
   clienteId       Int?
-  primaTotal      Float
-  primaNeta       Float
-  impuestos       Float
-  comision        Float
 
-  lead          Persona          @relation(fields: [leadId], references: [id])
-  vendedor      Vendedor         @relation(fields: [vendedorId], references: [id])
-  cliente       Cliente?         @relation(fields: [clienteId], references: [id])
-  vehiculos     Vehiculo[]
-  seguroSalud   SeguroSalud?
-  seguroGeneral SeguroGeneral?
-  pagos         Pago[]
-  poliza        Poliza?
-  auditoriaId   Int?
-  auditoria     AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+  lead     Persona  @relation(fields: [leadId], references: [id])
+  vendedor Vendedor @relation(fields: [vendedorId], references: [id])
+  cliente  Cliente? @relation(fields: [clienteId], references: [id])
 
-  // Campos de auditoría estándar
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-}
+  cotizacionVehicular CotizacionVehicular[]
+  cotizacionSalud     CotizacionSalud[]
+  cotizacionGeneral   CotizacionGeneral[]
 
-//
-// MODELOS DE TIPOS DE SEGUROS
-//
-model Vehiculo {
-  id             Int    @id @default(autoincrement())
-  cotizacionId   Int
-  placa          String
-  marca          String
-  modelo         String
-  anio           Int
-  valorAsegurado Float
-  color          String
-  numeroChassis  String
-  numeroMotor    String
-  uso            String // Particular, comercial, etc.
+  pagos  Pago[]
+  poliza Poliza?
 
-  cotizacion  Cotizacion       @relation(fields: [cotizacionId], references: [id])
   auditoriaId Int?
   auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
 
-  // Campos de auditoría estándar
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 }
 
-model SeguroSalud {
+model CotizacionVehicular {
+  id            Int @id @default(autoincrement())
+  cotizacionId  Int
+  vehiculoId    Int
+  aseguradoraId Int
+  productoId    Int
+
+  vigente Boolean @default(true)
+
+  valorAsegurado Float
+  primaNeta      Float
+  primaTotal     Float
+  tasa           Float
+
+  cotizacion  Cotizacion     @relation(fields: [cotizacionId], references: [id])
+  vehiculo    Vehiculo       @relation(fields: [vehiculoId], references: [id])
+  aseguradora Aseguradora    @relation(fields: [aseguradoraId], references: [id])
+  producto    ProductoSeguro @relation(fields: [productoId], references: [id])
+
+  coberturasSeleccionadas CotizacionCobertura[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Aseguradora {
+  id        Int              @id @default(autoincrement())
+  nombre    String           @unique
+  productos ProductoSeguro[]
+
+  cotizacionVehicular CotizacionVehicular[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model ProductoSeguro {
+  id            Int     @id @default(autoincrement())
+  aseguradoraId Int
+  nombre        String
+  tasaBase      Float
+  activo        Boolean @default(true)
+
+  aseguradora         Aseguradora           @relation(fields: [aseguradoraId], references: [id])
+  coberturas          CoberturaSeguro[]
+  cotizacionVehicular CotizacionVehicular[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model CoberturaSeguro {
+  id          Int     @id @default(autoincrement())
+  productoId  Int
+  nombre      String
+  descripcion String
+  obligatorio Boolean @default(false)
+  activo      Boolean @default(true)
+
+  producto            ProductoSeguro        @relation(fields: [productoId], references: [id])
+  CotizacionCobertura CotizacionCobertura[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model CotizacionCobertura {
+  id                   Int @id @default(autoincrement())
+  cotizacionVehiculoId Int
+  coberturaSeguroId    Int
+
+  cotizacionVehicular CotizacionVehicular @relation(fields: [cotizacionVehiculoId], references: [id])
+  cobertura           CoberturaSeguro     @relation(fields: [coberturaSeguroId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Vehiculo {
+  id               Int     @id @default(autoincrement())
+  clienteId        Int
+  modeloVehiculoId Int
+  anio             Int
+  numeroChassis    String
+  numeroMotor      String
+  uso              String
+  placa            String? @unique
+
+  cliente             Cliente               @relation(fields: [clienteId], references: [id])
+  modeloVehiculo      ModeloVehiculo        @relation(fields: [modeloVehiculoId], references: [id])
+  cotizacionVehicular CotizacionVehicular[]
+
+  auditoriaId Int?
+  auditoria   AuditoriaAccion? @relation(fields: [auditoriaId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model MarcaVehiculo {
+  id      Int              @id @default(autoincrement())
+  nombre  String           @unique
+  origen  OrigenVehiculo // enum: CHINO, EUROPEO, AMERICANO, JAPONÉS, OTRO
+  modelos ModeloVehiculo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ModeloVehiculo {
+  id        Int           @id @default(autoincrement())
+  nombre    String
+  marcaId   Int
+  marca     MarcaVehiculo @relation(fields: [marcaId], references: [id])
+  vehiculos Vehiculo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([nombre, marcaId]) // evita modelos repetidos dentro de una misma marca
+}
+
+enum OrigenVehiculo {
+  CHINO
+  EUROPEO
+  AMERICANO
+  JAPONES
+  OTRO
+}
+
+model CotizacionSalud {
   id                    Int     @id @default(autoincrement())
   cotizacionId          Int     @unique
   planSalud             String
@@ -460,7 +577,7 @@ model BeneficiarioSalud {
   personaId     Int
   parentescoId  Int
 
-  seguroSalud SeguroSalud      @relation(fields: [seguroSaludId], references: [id])
+  seguroSalud CotizacionSalud  @relation(fields: [seguroSaludId], references: [id])
   persona     Persona          @relation(fields: [personaId], references: [id])
   parentesco  Parentesco       @relation(fields: [parentescoId], references: [id])
   auditoriaId Int?
@@ -472,7 +589,7 @@ model BeneficiarioSalud {
   deletedAt DateTime?
 }
 
-model SeguroGeneral {
+model CotizacionGeneral {
   id                   Int     @id @default(autoincrement())
   cotizacionId         Int     @unique
   tipoRiesgo           String // Tipo específico de seguro general (Incendio, Robo, Responsabilidad Civil, etc.)

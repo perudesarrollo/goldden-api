@@ -8,6 +8,7 @@ import { LeadController } from './controllers/lead.controller';
 import { CreateLeadUseCase } from './application/create-lead.use-case';
 import { ListLeadUseCase } from './application/get-lead.use-case';
 import { UpdateLeadUseCase } from './application/update-lead.use-case';
+import { GetByIdLeadUseCase } from './application/get-id-lead.use-case';
 
 @Module({
   imports: [PrismaModule, ConfigModule],
@@ -17,6 +18,7 @@ import { UpdateLeadUseCase } from './application/update-lead.use-case';
     CreateLeadUseCase,
     ListLeadUseCase,
     UpdateLeadUseCase,
+    GetByIdLeadUseCase,
   ],
   exports: [LeadService],
 })

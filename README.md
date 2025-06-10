@@ -96,3 +96,13 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+
+Estado	Descripción
+BORRADOR	Cotización recién creada, sin datos completos o sin propuestas generadas.
+PROPUESTA	Ya se han generado propuestas para una o varias aseguradoras por vehículo.
+SELECCIONADA	El usuario ha elegido una aseguradora/producto para cada vehículo.
+CONFIRMADA	Se confirma la propuesta final con el cliente, lista para pago o emisión.
+PAGADA	Cotización ha sido pagada, si aplica pasarela de pago.
+POLIZA_EMITIDA	Ya se emitió la póliza (internamente o por integración con aseguradora).
+CANCELADA	Cotización cancelada manualmente o por vencimiento (fecha expiración).

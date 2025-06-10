@@ -126,6 +126,11 @@ CREATE TABLE `PersonaContratante` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `personaId` INTEGER NOT NULL,
     `parentescoId` INTEGER NOT NULL,
+    `tipoPersona` ENUM('N', 'J') NOT NULL,
+    `numeroDocumento` VARCHAR(191) NOT NULL,
+    `nombreContratante` VARCHAR(191) NOT NULL,
+    `correo` VARCHAR(191) NOT NULL,
+    `telefono` VARCHAR(191) NOT NULL,
     `auditoriaId` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -187,20 +192,87 @@ CREATE TABLE `Vendedor` (
 -- CreateTable
 CREATE TABLE `Cotizacion` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `leadId` INTEGER NOT NULL,
-    `estado` ENUM('PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'EXPIRADA') NOT NULL,
+    `tipo` ENUM('VEHICULAR', 'SALUD', 'GENERALES') NOT NULL,
+    `estado` ENUM('BORRADOR', 'PROPUESTA', 'SELECCIONADA', 'CONFIRMADA', 'PAGADA', 'POLIZA_EMITIDA', 'CANCELADA') NOT NULL,
     `fechaCotizacion` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `fechaExpiracion` DATETIME(3) NOT NULL,
-    `aseguradora` VARCHAR(191) NOT NULL,
     `renovacionAuto` BOOLEAN NOT NULL DEFAULT false,
-    `tipoSeguro` ENUM('VEHICULAR', 'SALUD', 'GENERALES') NOT NULL,
+    `leadId` INTEGER NOT NULL,
     `vendedorId` INTEGER NOT NULL,
     `clienteId` INTEGER NULL,
-    `primaTotal` DOUBLE NOT NULL,
-    `primaNeta` DOUBLE NOT NULL,
-    `impuestos` DOUBLE NOT NULL,
-    `comision` DOUBLE NOT NULL,
     `auditoriaId` INTEGER NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `deletedAt` DATETIME(3) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CotizacionVehicular` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `cotizacionId` INTEGER NOT NULL,
+    `vehiculoId` INTEGER NOT NULL,
+    `aseguradoraId` INTEGER NOT NULL,
+    `productoId` INTEGER NOT NULL,
+    `vigente` BOOLEAN NOT NULL DEFAULT true,
+    `valorAsegurado` DOUBLE NOT NULL,
+    `primaNeta` DOUBLE NOT NULL,
+    `primaTotal` DOUBLE NOT NULL,
+    `tasa` DOUBLE NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `deletedAt` DATETIME(3) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Aseguradora` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `deletedAt` DATETIME(3) NULL,
+
+    UNIQUE INDEX `Aseguradora_nombre_key`(`nombre`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `ProductoSeguro` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `aseguradoraId` INTEGER NOT NULL,
+    `nombre` VARCHAR(191) NOT NULL,
+    `tasaBase` DOUBLE NOT NULL,
+    `activo` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `deletedAt` DATETIME(3) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CoberturaSeguro` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `productoId` INTEGER NOT NULL,
+    `nombre` VARCHAR(191) NOT NULL,
+    `descripcion` VARCHAR(191) NOT NULL,
+    `obligatorio` BOOLEAN NOT NULL DEFAULT false,
+    `activo` BOOLEAN NOT NULL DEFAULT true,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `deletedAt` DATETIME(3) NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CotizacionCobertura` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `cotizacionVehiculoId` INTEGER NOT NULL,
+    `coberturaSeguroId` INTEGER NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `deletedAt` DATETIME(3) NULL,
@@ -211,26 +283,48 @@ CREATE TABLE `Cotizacion` (
 -- CreateTable
 CREATE TABLE `Vehiculo` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `cotizacionId` INTEGER NOT NULL,
-    `placa` VARCHAR(191) NOT NULL,
-    `marca` VARCHAR(191) NOT NULL,
-    `modelo` VARCHAR(191) NOT NULL,
+    `clienteId` INTEGER NOT NULL,
+    `modeloVehiculoId` INTEGER NOT NULL,
     `anio` INTEGER NOT NULL,
-    `valorAsegurado` DOUBLE NOT NULL,
-    `color` VARCHAR(191) NOT NULL,
     `numeroChassis` VARCHAR(191) NOT NULL,
     `numeroMotor` VARCHAR(191) NOT NULL,
     `uso` VARCHAR(191) NOT NULL,
+    `placa` VARCHAR(191) NULL,
     `auditoriaId` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `deletedAt` DATETIME(3) NULL,
 
+    UNIQUE INDEX `Vehiculo_placa_key`(`placa`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `SeguroSalud` (
+CREATE TABLE `MarcaVehiculo` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre` VARCHAR(191) NOT NULL,
+    `origen` ENUM('CHINO', 'EUROPEO', 'AMERICANO', 'JAPONES', 'OTRO') NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `MarcaVehiculo_nombre_key`(`nombre`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `ModeloVehiculo` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `nombre` VARCHAR(191) NOT NULL,
+    `marcaId` INTEGER NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `ModeloVehiculo_nombre_marcaId_key`(`nombre`, `marcaId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CotizacionSalud` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `cotizacionId` INTEGER NOT NULL,
     `planSalud` VARCHAR(191) NOT NULL,
@@ -245,7 +339,7 @@ CREATE TABLE `SeguroSalud` (
     `updatedAt` DATETIME(3) NOT NULL,
     `deletedAt` DATETIME(3) NULL,
 
-    UNIQUE INDEX `SeguroSalud_cotizacionId_key`(`cotizacionId`),
+    UNIQUE INDEX `CotizacionSalud_cotizacionId_key`(`cotizacionId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -264,7 +358,7 @@ CREATE TABLE `BeneficiarioSalud` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `SeguroGeneral` (
+CREATE TABLE `CotizacionGeneral` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `cotizacionId` INTEGER NOT NULL,
     `tipoRiesgo` VARCHAR(191) NOT NULL,
@@ -278,7 +372,7 @@ CREATE TABLE `SeguroGeneral` (
     `updatedAt` DATETIME(3) NOT NULL,
     `deletedAt` DATETIME(3) NULL,
 
-    UNIQUE INDEX `SeguroGeneral_cotizacionId_key`(`cotizacionId`),
+    UNIQUE INDEX `CotizacionGeneral_cotizacionId_key`(`cotizacionId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -535,19 +629,49 @@ ALTER TABLE `Cotizacion` ADD CONSTRAINT `Cotizacion_clienteId_fkey` FOREIGN KEY 
 ALTER TABLE `Cotizacion` ADD CONSTRAINT `Cotizacion_auditoriaId_fkey` FOREIGN KEY (`auditoriaId`) REFERENCES `AuditoriaAccion`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Vehiculo` ADD CONSTRAINT `Vehiculo_cotizacionId_fkey` FOREIGN KEY (`cotizacionId`) REFERENCES `Cotizacion`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `CotizacionVehicular` ADD CONSTRAINT `CotizacionVehicular_cotizacionId_fkey` FOREIGN KEY (`cotizacionId`) REFERENCES `Cotizacion`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CotizacionVehicular` ADD CONSTRAINT `CotizacionVehicular_vehiculoId_fkey` FOREIGN KEY (`vehiculoId`) REFERENCES `Vehiculo`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CotizacionVehicular` ADD CONSTRAINT `CotizacionVehicular_aseguradoraId_fkey` FOREIGN KEY (`aseguradoraId`) REFERENCES `Aseguradora`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CotizacionVehicular` ADD CONSTRAINT `CotizacionVehicular_productoId_fkey` FOREIGN KEY (`productoId`) REFERENCES `ProductoSeguro`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `ProductoSeguro` ADD CONSTRAINT `ProductoSeguro_aseguradoraId_fkey` FOREIGN KEY (`aseguradoraId`) REFERENCES `Aseguradora`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CoberturaSeguro` ADD CONSTRAINT `CoberturaSeguro_productoId_fkey` FOREIGN KEY (`productoId`) REFERENCES `ProductoSeguro`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CotizacionCobertura` ADD CONSTRAINT `CotizacionCobertura_cotizacionVehiculoId_fkey` FOREIGN KEY (`cotizacionVehiculoId`) REFERENCES `CotizacionVehicular`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `CotizacionCobertura` ADD CONSTRAINT `CotizacionCobertura_coberturaSeguroId_fkey` FOREIGN KEY (`coberturaSeguroId`) REFERENCES `CoberturaSeguro`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Vehiculo` ADD CONSTRAINT `Vehiculo_clienteId_fkey` FOREIGN KEY (`clienteId`) REFERENCES `Cliente`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `Vehiculo` ADD CONSTRAINT `Vehiculo_modeloVehiculoId_fkey` FOREIGN KEY (`modeloVehiculoId`) REFERENCES `ModeloVehiculo`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Vehiculo` ADD CONSTRAINT `Vehiculo_auditoriaId_fkey` FOREIGN KEY (`auditoriaId`) REFERENCES `AuditoriaAccion`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `SeguroSalud` ADD CONSTRAINT `SeguroSalud_cotizacionId_fkey` FOREIGN KEY (`cotizacionId`) REFERENCES `Cotizacion`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `ModeloVehiculo` ADD CONSTRAINT `ModeloVehiculo_marcaId_fkey` FOREIGN KEY (`marcaId`) REFERENCES `MarcaVehiculo`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `SeguroSalud` ADD CONSTRAINT `SeguroSalud_auditoriaId_fkey` FOREIGN KEY (`auditoriaId`) REFERENCES `AuditoriaAccion`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `CotizacionSalud` ADD CONSTRAINT `CotizacionSalud_cotizacionId_fkey` FOREIGN KEY (`cotizacionId`) REFERENCES `Cotizacion`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `BeneficiarioSalud` ADD CONSTRAINT `BeneficiarioSalud_seguroSaludId_fkey` FOREIGN KEY (`seguroSaludId`) REFERENCES `SeguroSalud`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `CotizacionSalud` ADD CONSTRAINT `CotizacionSalud_auditoriaId_fkey` FOREIGN KEY (`auditoriaId`) REFERENCES `AuditoriaAccion`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `BeneficiarioSalud` ADD CONSTRAINT `BeneficiarioSalud_seguroSaludId_fkey` FOREIGN KEY (`seguroSaludId`) REFERENCES `CotizacionSalud`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `BeneficiarioSalud` ADD CONSTRAINT `BeneficiarioSalud_personaId_fkey` FOREIGN KEY (`personaId`) REFERENCES `Persona`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -559,10 +683,10 @@ ALTER TABLE `BeneficiarioSalud` ADD CONSTRAINT `BeneficiarioSalud_parentescoId_f
 ALTER TABLE `BeneficiarioSalud` ADD CONSTRAINT `BeneficiarioSalud_auditoriaId_fkey` FOREIGN KEY (`auditoriaId`) REFERENCES `AuditoriaAccion`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `SeguroGeneral` ADD CONSTRAINT `SeguroGeneral_cotizacionId_fkey` FOREIGN KEY (`cotizacionId`) REFERENCES `Cotizacion`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `CotizacionGeneral` ADD CONSTRAINT `CotizacionGeneral_cotizacionId_fkey` FOREIGN KEY (`cotizacionId`) REFERENCES `Cotizacion`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `SeguroGeneral` ADD CONSTRAINT `SeguroGeneral_auditoriaId_fkey` FOREIGN KEY (`auditoriaId`) REFERENCES `AuditoriaAccion`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `CotizacionGeneral` ADD CONSTRAINT `CotizacionGeneral_auditoriaId_fkey` FOREIGN KEY (`auditoriaId`) REFERENCES `AuditoriaAccion`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `Pago` ADD CONSTRAINT `Pago_cotizacionId_fkey` FOREIGN KEY (`cotizacionId`) REFERENCES `Cotizacion`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

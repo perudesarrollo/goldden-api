@@ -7,11 +7,14 @@ import {
   IsDateString,
   IsNumber,
   IsEnum,
+  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Gender, MaritalStatusPerson, TypePerson } from '@prisma/client';
+import { UpdateContratanteInfoDto } from './contratante-info-data.dto';
 
 export class UpdateLeadDto {
+  [x: string]: any;
   @IsOptional()
   @IsEnum(TypePerson)
   tipoPersona?: TypePerson;
@@ -43,6 +46,15 @@ export class UpdateLeadDto {
   @IsOptional()
   @IsInt()
   ciudadId?: number;
+
+  @IsOptional()
+  @IsInt()
+  auditoriaId?: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateContratanteInfoDto)
+  contratanteInfo?: UpdateContratanteInfoDto;
 
   @IsOptional()
   @IsString()

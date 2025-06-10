@@ -21,8 +21,11 @@
     "seed:users": "ts-node prisma/seeders/user.seeder.ts",
     "seed:leads": "ts-node prisma/seeders/lead.seeder.ts",
     "seed:pais": "ts-node prisma/seeders/pais.seeder.ts",
+    "seed:vendedores": "ts-node prisma/seeders/vendedor.cliente.seed.ts",
     "seed:cotizacion": "ts-node prisma/seeders/cotizacion.seeders.ts",
-    "seed:vendedores": "ts-node prisma/seeders/vendedor.cliente.seed.ts"
+    "seed:parentescos": "ts-node prisma/seeders/seed-parentescos.ts",
+    "vehiculo.seed": "ts-node prisma/seeders/vehiculo.seed.ts",
+    "aseguradora.seeder": "ts-node prisma/seeders/aseguradora.seeder.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^9.7.0",
@@ -33,14 +36,14 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.1.6",
-    "@prisma/client": "^6.7.0",
+    "@prisma/client": "^6.8.2",
     "@types/bcrypt": "^5.0.2",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "date-fns": "^4.1.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
-    "prisma": "^6.7.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1"
@@ -66,6 +69,7 @@
     "globals": "^16.0.0",
     "jest": "^29.7.0",
     "prettier": "^3.4.2",
+    "prisma": "^6.8.2",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",

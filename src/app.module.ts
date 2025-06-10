@@ -7,6 +7,10 @@ import jwtConfig from './config/jwt.config';
 import { ConfigModule } from '@nestjs/config';
 import { QuoteModule } from './v1/quotes/quotes.module';
 import { LeadModule } from './v1/lead/lead.module';
+import { UbigeoModule } from './v1/ubigeo/ubigeo.module';
+import { ClientModule } from './v1/client/client.module';
+import { VehicleModule } from './v1/vehicules/vehicle.module';
+import { SellerModule } from './v1/Seller/seller.module';
 
 @Module({
   imports: [
@@ -18,6 +22,10 @@ import { LeadModule } from './v1/lead/lead.module';
     PrismaModule,
     QuoteModule,
     LeadModule,
+    UbigeoModule,
+    ClientModule,
+    VehicleModule,
+    SellerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
