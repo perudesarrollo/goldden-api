@@ -17,6 +17,7 @@ import { ListLeadsDto } from '../interfaces/list-leads.dto';
 import { ListLeadUseCase } from '../application/get-lead.use-case';
 import { UpdateLeadDto } from '../interfaces/update-lead.dto';
 import { UpdateLeadUseCase } from '../application/update-lead.use-case';
+import { GetByIdLeadUseCase } from '../application/get-id-lead.use-case';
 
 @Controller('v1/leads')
 export class LeadController {
@@ -24,6 +25,7 @@ export class LeadController {
     private readonly createLeadUseCase: CreateLeadUseCase,
     private readonly listLeadUseCase: ListLeadUseCase,
     private readonly updateLeadUseCase: UpdateLeadUseCase,
+    private readonly getByIdLeadUseCase: GetByIdLeadUseCase,
   ) {}
 
   @Post()
@@ -51,6 +53,13 @@ export class LeadController {
       message: 'Leads listados exitosamente',
       ...result,
     };
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener un lead por ID' })
+  @HttpCode(HttpStatus.OK)
+  async getLeadById(@Param('id', ParseIntPipe) id: number) {
+    return await this.getByIdLeadUseCase.execute(id);
   }
 
   @Put(':id')
